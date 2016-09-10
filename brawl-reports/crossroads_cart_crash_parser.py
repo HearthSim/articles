@@ -15,6 +15,7 @@ COLUMNS = [
 	"First player", "Friendly player",
 	"Player1 Hero", "Player2 Hero",
 	"Player1 Playstate", "Player2 Playstate",
+	"Turns",
 	"FirstPlayer Pick", "FirstPlayer Choice1", "FirstPlayer Choice2", "FirstPlayer Choice3",
 	"SecPlayer Pick", "SecPlayer Choice1", "SecPlayer Choice2", "SecPlayer Choice3",
 ]
@@ -62,6 +63,7 @@ def parse_file(f):
 	hero2 = player2.starting_hero.card_id
 	state1 = player1.tags[GameTag.PLAYSTATE]
 	state2 = player2.tags[GameTag.PLAYSTATE]
+	turns = game.tags[GameTag.TURN]
 
 	out = StringIO()
 	writer = csv.writer(out)
@@ -77,7 +79,7 @@ def parse_file(f):
 			values[i] = game.find_entity_by_id(value).card_id
 
 	# Each row looks like:
-	# first_player,friendly_player,hero1,hero2,final_state1,final_state2,
+	# first_player,friendly_player,hero1,hero2,final_state1,final_state2,turns,
 	# picked1,choice1_1,choice1_2,choice1_3,picked2,choice2_1,choice2_2,choice2_3
 	# Two of the opponent's choices will be empty as there is no way to know them.
 	# For this brawl, it's one row per game.
