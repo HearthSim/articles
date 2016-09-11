@@ -1,1 +1,5 @@
-mrjob==0.5.4
+mrjob
+boto3
+hsreplay
+hearthstone
+aniso8601
