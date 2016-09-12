@@ -1,15 +1,16 @@
-"""Reusable MRJob protocols to give MRJob scripts access to HSReplay.net objects."""
-from io import StringIO
-from gzip import decompress
-from hsreplay.document import HSReplayDocument
+"""
+Reusable MRJob protocols to give MRJob scripts access to HSReplay.net objects.
+"""
 import boto3
+from gzip import decompress
+from io import StringIO
+from hsreplay.document import HSReplayDocument
 
 
 S3 = boto3.client("s3")
 
 
-class HSReplayS3Protocol(object):
-
+class HSReplayS3Protocol:
 	def read(self, line):
 		# Each line should be to a hsreplay.xml file
 		try:
@@ -26,8 +27,7 @@ class HSReplayS3Protocol(object):
 			return shortid, replay
 
 
-class PowerlogS3Protocol(object):
-
+class PowerlogS3Protocol:
 	def read(self, line):
 		try:
 			# Each line should be to a power.log
