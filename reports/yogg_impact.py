@@ -55,7 +55,6 @@ class Job(MRJob):
 		winning_player_id = player1.id if state1 == PlayState.WON else player2.id
 
 		for player_id_that_played_yogg, turn_yogg_played in watcher.yogg_events:
-
 			num_turns_made_after_yogg = total_num_turns - turn_yogg_played
 			yogg_controller_won = player_id_that_played_yogg == winning_player_id
 

@@ -106,7 +106,7 @@ When working on the data processing infrastructure it is possible to only pay th
  bootstrapping the cluster once by first running this command:
 
 ```
-$ mrjob create-cluster --conf mrjob.conf
+$ mrjob create-cluster --conf-path mrjob.conf
 ```
 
 This will create a cluster that will remain active until it's idle for a full hour
@@ -117,7 +117,7 @@ Then when invoking subsequent jobs the additional `--cluster-id <ID>` command ca
 to have the job run on the already provisioned cluster. E.g.
 
 ```
-$ python reports/my_job.py -r emr --conf mrjob.conf --cluster-id j-1CSVCLY28T3EY inputs.txt
+$ python reports/my_job.py -r emr --conf-path mrjob.conf --cluster-id j-1CSVCLY28T3EY inputs.txt
 ```
 
 
