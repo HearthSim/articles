@@ -11,20 +11,7 @@ from hsreplay.document import HSReplayDocument
 S3 = boto3.client("s3")
 
 
-class HSReplayS3Protocol:
-	def read(self, line):
-		# Each line should be to a hsreplay.xml file
-		bucket, sep, key = line.decode("utf8").partition(":")
-		obj = S3.get_object(Bucket=bucket, Key=key)
-		xml_str = decompress(obj["Body"].read()).decode("utf8")
-
-		shortid = key[25:-13]
-		replay = HSReplayDocument.from_xml_file(StringIO(xml_str))
-
-		return shortid, replay
-
-
-class PowerlogS3Protocol:
+class BaseS3Protocol:
 	DEBUG = True
 
 	def read_s3(self, bucket, key):
@@ -36,19 +23,36 @@ class PowerlogS3Protocol:
 
 		return out
 
-	def read(self, line):
-		# Each line should be to a power.log
-		bucket, sep, key = line.decode("utf8").partition(":")
-
+	def get_file_handle(self, line):
+		bucket, sep, key = line.decode("utf-8").partition(":")
 		if bucket == "local":
-			out = open(key)
-		else:
-			try:
-				out = self.read_s3(bucket, key)
-			except Exception:
-				if self.DEBUG:
-					raise
-				else:
-					return None, ""
+			# Local filesystem handle
+			return open(key, "r")
 
-		return line, out
+		try:
+			return self.read_s3(bucket, key)
+		except Exception:
+			if self.DEBUG:
+				raise
+			else:
+				return line, None
+
+
+class HSReplayS3Protocol(BaseS3Protocol):
+	def read(self, line):
+		fh = self.get_file_handle(line)
+		if not fh:
+			return line, None
+		try:
+			replay = HSReplayDocument.from_xml_file(fh)
+		except Exception:
+			if self.DEBUG:
+				raise
+			else:
+				return line, None
+		return line, replay
+
+
+class PowerlogS3Protocol(BaseS3Protocol):
+	def read(self, line):
+		return line, self.get_file_handle(line)
