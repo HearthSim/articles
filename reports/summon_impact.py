@@ -6,29 +6,17 @@ Input: A sample of games in which a card with summons was played.
 Format: replay.xml
 """
 
-from hearthstone.enums import CardType, GameTag, BlockType, PlayState, PowerType
+from hearthstone.enums import CardType, GameTag, BlockType, PlayState
 from hearthstone.hslog.export import EntityTreeExporter
 from mrjob.job import MRJob
 from protocols import HSReplayS3Protocol
 
 
-CARD_ID = "KAR_114" #Barns
+CARD_ID = "NEW1_031" #Animal Companion
 
 
-def find_battlecry(block):
-	for subblock in block.packets:
-		if (
-			subblock.power_type == PowerType.BLOCK_START and
-			subblock.type == BlockType.POWER and
-			subblock.entity == block.entity
-		):
-			return subblock
-
-
-def find_summons(block):
-	for packet in block.packets:
-		if packet.power_type == PowerType.FULL_ENTITY:
-			yield packet
+def is_minion(entity):
+	return entity.tags.get(GameTag.CARDTYPE, 0) == CardType.MINION
 
 
 class SummonExporter(EntityTreeExporter):
@@ -36,35 +24,73 @@ class SummonExporter(EntityTreeExporter):
 	def __init__(self, packet_tree):
 		super().__init__(packet_tree)
 		self.events = []
+		self.summons = []
+		self.entity = None
+		self.waiting_for_entity = -1
+		self.waiting_for_summons = False
 
 	def handle_block(self, block):
 		if block.type == BlockType.PLAY:
-			entity = self.game.find_entity_by_id(block.entity)
-			if entity.card_id == CARD_ID:
-				self.handle_card_played(block, entity)
+			self.handle_play_block(block)
+		elif block.type == BlockType.POWER and self.entity is not None:
+			self.waiting_for_summons = True
 		super().handle_block(block)
+		if block.type == BlockType.PLAY:
+			self.handle_play_block_end()
+		elif block.type == BlockType.POWER:
+			self.waiting_for_summons = False
 
-	def filter_minion(self, packet):
-		entity = self.game.find_entity_by_id(packet.entity)
-		return entity.tags.get(GameTag.CARDTYPE) == CardType.MINION
+	def handle_show_entity(self, block):
+		super().handle_show_entity(block)
+		if block.entity == self.waiting_for_entity:
+			entity = self.game.find_entity_by_id(block.entity)
+			if entity and entity.card_id == CARD_ID:
+				self.entity = entity
 
-	def handle_card_played(self, block, entity):
-		controller = entity.controller
-		if controller:
-			battlecry = find_battlecry(block)
-			summons = filter(self.filter_minion, list(find_summons(battlecry)))
+	def handle_full_entity(self, block):
+		super().handle_full_entity(block)
+		if self.waiting_for_summons:
+			entity = self.game.find_entity_by_id(block.entity)
+			self.summons.append(entity)
+
+	def handle_play_block(self, block):
+		entity = self.game.find_entity_by_id(block.entity)
+		if not entity.card_id:
+			self.waiting_for_entity = block.entity
+		elif entity.card_id == CARD_ID:
+			self.entity = entity
+
+	def handle_play_block_end(self):
+		if self.entity is not None and self.entity.card_id:
+			summons = list(filter(is_minion, self.summons))
 			if summons:
+				controller = self.entity.controller
 				summon_ids = map(lambda entity: entity.card_id, summons)
 				turn = self.game.tags.get(GameTag.TURN)
 				self.events.append((controller.player_id, turn, summon_ids))
+		self.summons = []
+		self.entity = None
+		self.waiting_for_entity = -1
+
+
+def get_deck_content(player):
+	if not player or not player.initial_deck:
+		return ""
+	cards = filter(lambda x: x.card_id, player.initial_deck)
+	card_ids = map(lambda x: x.card_id, cards)
+	return "|".join(card_ids)
+
 
 class Job(MRJob):
 	INPUT_PROTOCOL = HSReplayS3Protocol
 
-	def mapper(self, line, replay):
+	def mapper(self, _, replay):
 		if not replay:
 			return
+		for data in self.analyze_replay(replay):
+			yield None, data
 
+	def analyze_replay(self, replay):
 		packet_tree = replay.to_packet_tree()[0]
 		exporter = packet_tree.export(SummonExporter)
 		game = exporter.game
@@ -79,15 +105,21 @@ class Job(MRJob):
 			won = player_id == winner.player_id
 			first_player = player_id == first_player
 			opponent_id = player_id % 2 + 1
-			player_hero = game.get_player(player_id).starting_hero.card_id[0:7]
-			opponent_hero = game.get_player(opponent_id).starting_hero.card_id[0:7]
+			player = game.get_player(player_id)
+			opponent = game.get_player(opponent_id)
+			player_hero = player.starting_hero.card_id[0:7]
+			player_deck = get_deck_content(player)
+			opponent_hero = opponent.starting_hero.card_id[0:7]
+			opponent_deck = get_deck_content(opponent)
 			region = player1.account_hi
 			values = (
 				player_hero, opponent_hero, won, first_player,
-				turn, total_turns, "|".join(summons), region
+				turn, total_turns, "|".join(summons), region,
+				player_deck, opponent_deck
 			)
-			line = ",".join(["%s"] * len(values)) % values
-			yield None, line
+
+			yield ",".join(["%s"] * len(values)) % values
+
 
 if __name__ == "__main__":
 	Job.run()
