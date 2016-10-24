@@ -7,6 +7,7 @@ import sys
 import os
 import csv
 import math
+import archetypes
 from collections import defaultdict
 from hearthstone import cardxml
 
@@ -15,17 +16,21 @@ db, _ = cardxml.load()
 
 class GameData:
 	def parse_line(self, line):
-		parts = line.split(",")[1:]
-		self.player_hero = db[parts[0]].card_class.name.title()
-		self.opponent_hero = db[parts[1]].card_class.name.title()
-		self.won = parts[2] == "TRUE"
-		self.first_player = parts[3] == "TRUE"
-		self.turn = int(parts[4])
+		parts = line.strip().split(",")
+		player_class = db[parts[0]].card_class
+		opponent_class = db[parts[1]].card_class
+		self.player_hero = player_class.name.title()
+		self.opponent_hero = opponent_class.name.title()
+		self.won = parts[2].upper() == "TRUE"
+		self.first_player = parts[3].upper() == "TRUE"
+		self.turn = math.floor((int(parts[4]) + 1) / 2)
 		self.total_turns = int(parts[5])
 		self.summons = [db[x].name for x in parts[6].split("|")]
 		self.region = parts[7]
-		self.player_deck = parts[8].split("|")
-		self.opponent_deck = parts[9].split("|")
+		self.player_deck = [db[x] for x in parts[8].split("|") if x]
+		self.opponent_deck = [db[x] for x in parts[9].split("|") if x]
+		self.player_archetype = archetypes.guess_archetype(self.player_deck, player_class)
+		self.opponent_archetype = archetypes.guess_archetype(self.opponent_deck, opponent_class)
 		return self
 
 
@@ -38,13 +43,13 @@ def group_by(func, items, key_filter=(lambda x: True)):
 	return ret
 
 def group_by_turn(games):
-	return group_by(lambda x: math.floor((x.turn + 1) / 2), games, lambda x: 2 <= x <= 12)
+	return group_by(lambda x: x.turn, games, lambda x: 2 <= x <= 12)
 
 def group_by_summon(games):
 	return group_by(lambda x: x.summons[0], games)
 
-def group_by_hero(games):
-	return group_by(lambda x: x.opponent_hero, games)
+def group_by_hero(games, archetype):
+	return group_by(lambda x: x.opponent_archetype if archetype else x.opponent_hero, games)
 
 def get_summon_data(games):
 	by_summon = group_by_summon(games)
@@ -59,37 +64,51 @@ def write_csv(subdir, name, games, group_func):
 	path = "animal_companion/" + subdir
 	if not os.path.exists(path):
 		os.makedirs(path)
-	with open(path + "/" + name + ".csv", "w") as csvfile:
-		print("writing", csvfile.name, "(%s games)" % len(games))
+	rows = defaultdict(lambda: [])
+	with open("%s/%s-%s.csv" % (path, name, len(games)), "w") as csvfile:
+		print("writing", csvfile.name)
 		writer = csv.writer(csvfile, delimiter=',', lineterminator='\n')
 		grouped = group_func(games)
 		keys = sorted(grouped.keys())
 		writer.writerow([""] + keys)
-		rows = defaultdict(lambda: [])
 		for key in keys:
-			summon_data = list(get_summon_data(grouped[key]))
+			games = grouped[key]
+			summon_data = list(get_summon_data(games))
 			for summon in summon_data:
 				rows[summon[0]].append(summon[1])
 			values = [x[1] for x in summon_data]
-			rows["min"].append(min(values))
-			rows["max"].append(max(values))
 			rows["variance"].append(round(max(values) - min(values), 2))
+			rows["z_count"].append(len(games))
 		for row in sorted(rows.keys()):
-			writer.writerow((row, *rows[row]))
+			name = "games" if row == "z_count" else row
+			writer.writerow((name, *rows[row]))
+	return rows
+
+def parse_csvs(games, group_name, use_archetype):
+	by_hero = group_by_hero(games, use_archetype)
+	if not use_archetype:
+		name = group_name + "-All"
+		rows = write_csv("by_turn", name, list(games), group_by_turn)
+	for hero in by_hero.keys():
+		name = "%s-vs-%s" % (group_name, hero)
+		rows = write_csv("by_turn", name, by_hero[hero], group_by_turn)
+	group_func = lambda x: group_by_hero(x, use_archetype)
+	for turn in range(2, 13):
+		name = "%s-Turn-%s" % (group_name, turn)
+		write_csv("by_hero", name, [x for x in games if x.turn == turn], group_func)
+	if not use_archetype:
+		write_csv("by_hero", group_name + "-All", list(games), group_func)
 
 lines = list(open(sys.argv[1], "r", encoding="utf-8"))[1:]
 all_games = [GameData().parse_line(x) for x in lines]
-
 hunter_games = [x for x in all_games if x.player_hero == "Hunter"]
-by_hero = group_by_hero(hunter_games)
 
-write_csv("by_turn", "All", list(hunter_games), group_by_turn)
-for hero in by_hero.keys():
-	write_csv("by_turn", hero, by_hero[hero], group_by_turn)
+parse_csvs(hunter_games, "All", False)
+#parse_csvs(hunter_games, "All", True)
 
-turn_2_3 = [x for x in hunter_games if 3 < x.turn < 7]
-turn_4_6 = [x for x in hunter_games if 6 < x.turn < 13]
+grouped_games = group_by(lambda x: x.player_archetype, hunter_games)
+for group in grouped_games.keys():
+	parse_csvs(grouped_games[group], group, False)
+	#parse_csvs(grouped_games[group], group, True)
 
-write_csv("by_hero", "All", list(hunter_games), group_by_hero)
-write_csv("by_hero", "Turn_2-3", turn_2_3, group_by_hero)
-write_csv("by_hero", "Turn_4-6", turn_4_6, group_by_hero)
+
