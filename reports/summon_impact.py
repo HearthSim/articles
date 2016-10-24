@@ -10,6 +10,7 @@ from hearthstone.enums import CardType, GameTag, BlockType, PlayState
 from hearthstone.hslog.export import EntityTreeExporter
 from mrjob.job import MRJob
 from protocols import HSReplayS3Protocol
+from mrjob.protocol import RawValueProtocol
 
 
 CARD_ID = "NEW1_031" #Animal Companion
@@ -83,6 +84,7 @@ def get_deck_content(player):
 
 class Job(MRJob):
 	INPUT_PROTOCOL = HSReplayS3Protocol
+	OUTPUT_PROTOCOL = RawValueProtocol
 
 	def mapper(self, _, replay):
 		if not replay:
@@ -115,10 +117,14 @@ class Job(MRJob):
 			values = (
 				player_hero, opponent_hero, won, first_player,
 				turn, total_turns, "|".join(summons), region,
-				player_deck, opponent_deck
+				player_deck, opponent_deck, 1
 			)
 
 			yield ",".join(["%s"] * len(values)) % values
+
+	def reducer(self, _, lines):
+		for line in lines:
+			yield None, line
 
 
 if __name__ == "__main__":
