@@ -21,9 +21,8 @@ from io import StringIO
 from uuid import uuid4
 from hearthstone.enums import BlockType, GameTag, PlayState, Zone
 from hearthstone.hslog.export import EntityTreeExporter, FriendlyPlayerExporter
-from mrjob.job import MRJob
-from mrjob.protocol import RawValueProtocol
-from protocols import HSReplayS3Protocol
+
+from protocols import BaseJob
 
 
 class DeepEntityTreeExporter(EntityTreeExporter):
@@ -62,7 +61,7 @@ class DeepEntityTreeExporter(EntityTreeExporter):
 		super().handle_tag_change(packet)
 
 
-def handle_replay(replay):
+def handle_replay(self, replay):
 	packet_tree = replay.to_packet_tree()[0]
 	exporter = packet_tree.export(DeepEntityTreeExporter)
 	game = exporter.game
@@ -100,24 +99,8 @@ def handle_replay(replay):
 	return out.getvalue().strip().replace("\r", "")
 
 
-class Job(MRJob):
-	INPUT_PROTOCOL = HSReplayS3Protocol
-	OUTPUT_PROTOCOL = RawValueProtocol
-
-	def mapper(self, line, replay):
-		if not replay:
-			return
-
-		try:
-			value = handle_replay(replay)
-		except Exception as e:
-			if self.INPUT_PROTOCOL.DEBUG:
-				raise
-			else:
-				return
-
-		self.increment_counter("replays", "replays_processed")
-		yield None, value
+class Job(BaseJob):
+	handler_function = handle_replay
 
 
 if __name__ == "__main__":

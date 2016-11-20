@@ -7,6 +7,8 @@ import json
 from gzip import decompress
 from io import StringIO
 from hsreplay.document import HSReplayDocument
+from mrjob.job import MRJob
+from mrjob.protocol import RawValueProtocol
 
 
 S3 = boto3.client("s3")
@@ -60,3 +62,26 @@ class HSReplayS3Protocol(BaseS3Protocol):
 			else:
 				return line, None
 		return line, replay
+
+
+class BaseJob(MRJob):
+	INPUT_PROTOCOL = HSReplayS3Protocol
+	OUTPUT_PROTOCOL = RawValueProtocol
+
+	def handler_function(self):
+		raise NotImplementedError
+
+	def mapper(self, line, replay):
+		if not replay:
+			return
+
+		try:
+			value = self.handler_function(replay)
+		except Exception as e:
+			if self.INPUT_PROTOCOL.DEBUG:
+				raise
+			else:
+				return
+
+		self.increment_counter("replays", "replays_processed")
+		yield None, value
