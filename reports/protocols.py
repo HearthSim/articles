@@ -3,6 +3,7 @@ Reusable MRJob protocols to give MRJob scripts access to HSReplay.net objects.
 """
 
 import boto3
+import json
 from gzip import decompress
 from io import StringIO
 from hsreplay.document import HSReplayDocument
@@ -23,8 +24,16 @@ class BaseS3Protocol:
 
 		return out
 
-	def get_file_handle(self, line):
+	def read_line_protocol(self, line):
 		bucket, sep, key = line.decode("utf-8").partition(":")
+		metadata = {}
+		if ":" in key:
+			# Extended format
+			key, sep, metadata = key.partition(":")
+			metadata = json.loads(metadata)
+		return bucket, key, metadata
+
+	def get_file_handle(self, bucket, key):
 		if bucket == "local":
 			# Local filesystem handle
 			return open(key, "r")
@@ -34,15 +43,15 @@ class BaseS3Protocol:
 		except Exception:
 			if self.DEBUG:
 				raise
-			else:
-				return line, None
 
 
 class HSReplayS3Protocol(BaseS3Protocol):
 	def read(self, line):
-		fh = self.get_file_handle(line)
+		bucket, key, metadata = self.read_line_protocol(line)
+		fh = self.get_file_handle(bucket, key)
 		if not fh:
 			return line, None
+
 		try:
 			replay = HSReplayDocument.from_xml_file(fh)
 		except Exception:
@@ -55,4 +64,7 @@ class HSReplayS3Protocol(BaseS3Protocol):
 
 class PowerlogS3Protocol(BaseS3Protocol):
 	def read(self, line):
-		return line, self.get_file_handle(line)
+		bucket, key, metadata = self.read_line_protocol(line)
+		fh = self.get_file_handle(bucket, key)
+
+		return line, fh
