@@ -60,11 +60,3 @@ class HSReplayS3Protocol(BaseS3Protocol):
 			else:
 				return line, None
 		return line, replay
-
-
-class PowerlogS3Protocol(BaseS3Protocol):
-	def read(self, line):
-		bucket, key, metadata = self.read_line_protocol(line)
-		fh = self.get_file_handle(bucket, key)
-
-		return line, fh
