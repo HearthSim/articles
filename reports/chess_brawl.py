@@ -61,7 +61,7 @@ class DeepEntityTreeExporter(EntityTreeExporter):
 		super().handle_tag_change(packet)
 
 
-def handle_replay(self, replay):
+def handle_replay(self, replay, metadata):
 	packet_tree = replay.to_packet_tree()[0]
 	exporter = packet_tree.export(DeepEntityTreeExporter)
 	game = exporter.game

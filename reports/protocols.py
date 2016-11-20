@@ -61,7 +61,8 @@ class HSReplayS3Protocol(BaseS3Protocol):
 				raise
 			else:
 				return line, None
-		return line, replay
+
+		return line, {"replay": replay, "metadata": metadata}
 
 
 class BaseJob(MRJob):
@@ -71,12 +72,17 @@ class BaseJob(MRJob):
 	def handler_function(self):
 		raise NotImplementedError
 
-	def mapper(self, line, replay):
+	def mapper(self, line, obj):
+		if not obj:
+			return
+
+		replay = obj.get("replay")
 		if not replay:
 			return
 
+		metadata = obj.get("metadata", {})
 		try:
-			value = self.handler_function(replay)
+			value = self.handler_function(replay, metadata)
 		except Exception as e:
 			if self.INPUT_PROTOCOL.DEBUG:
 				raise
