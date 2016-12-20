@@ -13,10 +13,12 @@ NOTE: Two of the opponent's choices will be empty as there is no way to know the
 
 import csv
 from io import StringIO
+
 from hearthstone.enums import ChoiceType, GameTag
 from hearthstone.hslog.watcher import LogWatcher
 from mrjob.job import MRJob
-from protocols import PowerlogS3Protocol
+
+from mapred.protocols import PowerlogS3Protocol
 
 
 class CustomWatcher(LogWatcher):

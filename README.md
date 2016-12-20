@@ -10,18 +10,14 @@ Replay analysis jobs are written using Yelp's [MRJob](https://pythonhosted
 scientists can easily develop jobs locally and then submit a request to a member of the
 HearthSim team to have them run the job at scale on a production map reduce cluster.
 
-Checkout `yogg_impact.py` for an example of how to write a job that uses a `hearthstone
-.hslog.watcher.LogWatcher` subclass to do an analysis against raw power.log files. As a
-data point towards the value of using EMR, running this example job on a set of 150,000
-replays on a single machine was going to take more than 24 hours to complete when
-originally written, however when it was run on EMR that same job only took 35 minutes to
-complete!
+Checkout `chess_brawl.py` for an example of how to write a job that uses a `hearthstone
+.hslog.export.EntityTreeExporter` subclass to do an analysis against the replay xml files. 
 
 Jobs that follow this template will have several things in common:
 
-1. They use the `protocols.PowerlogS3Protocol` input format class which handles
-abstracting away the source of the raw log data.
-2. They implement a subclass of `LogWatcher` and use the exposed hooks to capture whatever
+1. They use the `mapred.protocols.BaseS3Protocol` base class to abstract away the raw storage details
+and implement directly against the `hsreplay.document.HSReplayDocument` class.
+2. They implement a subclass of `EntityTreeExporter` and use the exposed hooks to capture whatever
 event data the job is focused on analyzing.
 3. They usually emit their final output as aggregates in a CSV like format so that final
 chart generation and analysis can be done in interactive visual tools like Excel.
@@ -49,17 +45,17 @@ Let's assume that your job script is named `my_job.py` and your input file is na
 `inputs.txt` and looks as follows:
 
 ```
-local:uploads/2016/09/ex1_power.log
-local:uploads/2016/09/ex2_power.log
-local:uploads/2016/09/ex3.power.log
+local:uploads/2016/09/ex1_replay.xml
+local:uploads/2016/09/ex2_replay.xml
+local:uploads/2016/09/ex3_replay.xml
 ```
 
-The `PowerlogS3Protocol` will then look for those files in the `./uploads` directory which
+The `BaseS3Protocol` will then look for those files in the `./uploads` directory which
 it expects to be in the same folder as where you invoked the script from.
 Once the test data is prepared, then the job can be run by invoking:
 
 ```
-$ python reports/my_job.py inputs.txt
+$ python my_job.py inputs.txt
 ```
 
 This will run the job entirely in a single process which makes it easy to attach a
@@ -71,25 +67,29 @@ makes them easy to unit test.
 ### Example - Running An EMR Job
 
 When your job is ready, have a member of the HearthSim team run it on the production data
-set. There are two small changes necessary to make the job run on EMR.
+set. There are a few small changes necessary to make the job run on EMR.
 
 1) You must replace the `<STORAGE_LOCATION>` in `inputs.txt` with the name of the raw log
 data bucket. Usually `hsreplaynet-replays`, so that it looks like:
 ```
-hsreplaynet-replays:uploads/2016/09/ex1_power.log
-hsreplaynet-replays:uploads/2016/09/ex2_power.log
-hsreplaynet-replays:uploads/2016/09/ex3.power.log
+hsreplaynet-replays:uploads/2016/09/ex1_replay.xml
+hsreplaynet-replays:uploads/2016/09/ex2_replay.xml
+hsreplaynet-replays:uploads/2016/09/ex3_replay.xml
 ```
+
 Since you likely want to run it on a larger set of inputs, you can ask a member of the
 HearthSim team to help you generate a larger input file by telling them the type of
 replays that you'd like to run the job over.
 
-2) When the HearthSim team member invokes the job they will do so from a machine in the
+2) You must run `$ ./package_libraries.sh` to generate a zip of the libraries in this repo so
+that they get shipped up to the map reduce cluster.
+
+3) When the HearthSim team member invokes the job they will do so from a machine in the
 data center that is configured with the correct AWS credentials in the environment. They
 will also use the `-r emr` option to tell MRJob to use EMR. E.g.
 
 ```
-$ python reports/my_job.py -r emr inputs.txt
+$ python my_job.py -r emr inputs.txt
 ```
 
 And that's it! MRJob will automatically provision an elastic map reduce cluster, whose
@@ -98,7 +98,6 @@ job. When the job is done MRJob will either stream the results back to console o
 them in S3 and then tear down the EMR cluster.
 
 Happy Questing, Adventurer!
-
 
 ### Advanced - Rapid Prototyping For HearthSim Members
 
@@ -117,15 +116,15 @@ Then when invoking subsequent jobs the additional `--cluster-id <ID>` command ca
 to have the job run on the already provisioned cluster. E.g.
 
 ```
-$ python reports/my_job.py -r emr --conf-path mrjob.conf --cluster-id j-1CSVCLY28T3EY inputs.txt
+$ python my_job.py -r emr --conf-path mrjob.conf --cluster-id j-1CSVCLY28T3EY inputs.txt
 ```
-
 
 ## License
 
-This project is licensed under the MIT license. The full license text is
-available in the LICENSE file.
+Copyright © HearthSim - All Rights Reserved
 
+With the exception of the job scripts under `/contrib`, which are licensed under the MIT license. The full license text 
+is available in the `/contrib/LICENSE` file.
 
 ### Community
 

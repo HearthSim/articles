@@ -19,10 +19,11 @@ Note that `cardID` may be blank if the card was drawn but never played (never re
 import csv
 from io import StringIO
 from uuid import uuid4
+
 from hearthstone.enums import BlockType, GameTag, PlayState, Zone
 from hearthstone.hslog.export import EntityTreeExporter, FriendlyPlayerExporter
 
-from protocols import BaseJob
+from mapred.protocols import BaseJob
 
 
 class DeepEntityTreeExporter(EntityTreeExporter):

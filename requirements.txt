@@ -3,3 +3,7 @@ boto3
 hsreplay
 hearthstone
 aniso8601
+psycopg2
+sqlalchemy
+sqlalchemy-redshift
+pytest

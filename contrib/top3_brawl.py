@@ -17,11 +17,13 @@ in the final set. You should do a second pass on it, filtering for COLLECTIBLE.
 
 import csv
 from io import StringIO
+
 from hearthstone.enums import GameTag
 from hearthstone.hslog.watcher import LogWatcher
 from mrjob.job import MRJob
 from mrjob.protocol import RawValueProtocol
-from protocols import PowerlogS3Protocol
+
+from mapred.protocols import PowerlogS3Protocol
 
 
 def parse_file(f):

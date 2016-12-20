@@ -5,7 +5,7 @@ Reusable MRJob protocols to give MRJob scripts access to HSReplay.net objects.
 import boto3
 import json
 from gzip import decompress
-from io import StringIO
+from io import BytesIO
 from hsreplay.document import HSReplayDocument
 from mrjob.job import MRJob
 from mrjob.protocol import RawValueProtocol
@@ -20,7 +20,7 @@ class BaseS3Protocol:
 	def read_s3(self, bucket, key):
 		obj = S3.get_object(Bucket=bucket, Key=key)
 		log_str = decompress(obj["Body"].read()).decode("utf8")
-		out = StringIO()
+		out = BytesIO()
 		out.write(log_str)
 		out.seek(0)
 
@@ -69,7 +69,7 @@ class BaseJob(MRJob):
 	INPUT_PROTOCOL = HSReplayS3Protocol
 	OUTPUT_PROTOCOL = RawValueProtocol
 
-	def handler_function(self):
+	def handler_function(self, replay, metadata):
 		raise NotImplementedError
 
 	def mapper(self, line, obj):

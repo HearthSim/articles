@@ -18,12 +18,13 @@ Output: CSV, multiple rows per game.
 import csv
 from io import StringIO
 from uuid import uuid4
+
 from hearthstone.enums import BlockType, GameTag, PowerType
 from hearthstone.hslog.watcher import LogWatcher
 from mrjob.job import MRJob
 from mrjob.protocol import RawValueProtocol
-from protocols import PowerlogS3Protocol
 
+from mapred.protocols import PowerlogS3Protocol
 
 TUSKARR_TOTEMIC = "AT_046"
 

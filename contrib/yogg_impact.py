@@ -8,10 +8,12 @@ Format: Power.log
 """
 
 from collections import defaultdict
+
 from hearthstone.enums import GameTag, BlockType, PlayState
 from hearthstone.hslog.watcher import LogWatcher
 from mrjob.job import MRJob
-from protocols import PowerlogS3Protocol
+
+from mapred.protocols import PowerlogS3Protocol
 
 
 class YoggEventWatcher(LogWatcher):
