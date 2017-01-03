@@ -17,7 +17,7 @@ LEFT JOIN entity_state es_before ON es_before.before_block_id = b.id AND es_befo
 WHERE b.block_type = f_enum_val('BlockType.TRIGGER')
 AND b.step = f_enum_val('Step.MAIN_START')
 AND b.entity_id IN (2, 3)
-GROUP BY b.game_id, b.entity_id, b.turn
+GROUP BY b.game_id, b.entity_id, f_player_turn(b.turn)
 ) t
 GROUP BY t.turn
 ORDER BY t.turn;
