@@ -1,6 +1,7 @@
 """
 A command line utility for generating input.txt files in the format expected by the `load_redshift.py` job.
 """
+import os
 import json
 import time
 import argparse
@@ -22,6 +23,7 @@ SELECT
         FROM cards_include ci1 JOIN card c1 ON c1.id = ci1.card_id
         WHERE ci1.deck_id = max(ggp1.deck_list_id)
     ) AS player1_deck_list,
+    max(cd1.archetype_id) AS player1_archetype_id,
     CASE WHEN max(cd1.size) = 30 THEN TRUE ELSE FALSE END AS player1_full_deck_known,
     CASE WHEN max(ggp1.legend_rank) IS NOT NULL THEN 0 ELSE max(ggp1.rank) END AS player1_rank,
     max(ggp1.legend_rank) AS player1_legend_rank,
@@ -31,6 +33,7 @@ SELECT
         FROM cards_include ci2 JOIN card c2 ON c2.id = ci2.card_id
         WHERE ci2.deck_id = max(ggp2.deck_list_id)
     ) AS player2_deck_list,
+    max(cd2.archetype_id) AS player2_archetype_id,
     CASE WHEN max(cd2.size) = 30 THEN TRUE ELSE FALSE END AS player2_full_deck_known,
     CASE WHEN max(ggp2.legend_rank) IS NOT NULL THEN 0 ELSE max(ggp2.rank) END AS player2_rank,
     max(ggp2.legend_rank) AS player2_legend_rank
@@ -67,7 +70,7 @@ if __name__ == '__main__':
 	parser.add_argument('--connection', dest='connection', action='store')
 	parser.add_argument('--start', dest='start', action='store')
 	parser.add_argument('--end', dest='end', action='store')
-	parser.add_argument('--output', dest='output', action='store')
+	parser.add_argument('--dir', dest='dir', action='store')
 	args = parser.parse_args()
 
 	connection = psycopg2.connect(args.connection)
@@ -87,12 +90,12 @@ if __name__ == '__main__':
 
 	bucket = "hsreplaynet-replays"
 
-	if args.output:
-		output_file_name = args.output
-	else:
-		output_file_name = start_str + "_TO_" + end_str + "_inputs.txt"
-		output_file_name = output_file_name.replace(" ", "_")
-		output_file_name = output_file_name.replace(":", "-")
+	output_file_name = start_str + "_TO_" + end_str + "_inputs.txt"
+	output_file_name = output_file_name.replace(" ", "_")
+	output_file_name = output_file_name.replace(":", "-")
+
+	if args.dir:
+		output_file_name = os.path.join(args.dir, output_file_name)
 
 	with open(output_file_name, 'w') as output:
 		ROW_TEMPLATE = "%s:%s:%s\n"
@@ -107,6 +110,7 @@ if __name__ == '__main__':
 				"players": {
 					"1": {
 						"deck_id": row["player1_deck_id"],
+						"archetype_id": row["player1_archetype_id"],
 						"deck_list": row["player1_deck_list"],
 						"rank": row["player1_rank"],
 						"legend_rank": row["player1_legend_rank"],
@@ -114,6 +118,7 @@ if __name__ == '__main__':
 					},
 					"2": {
 						"deck_id": row["player2_deck_id"],
+						"archetype_id": row["player2_archetype_id"],
 						"deck_list": row["player2_deck_list"],
 						"rank": row["player2_rank"],
 						"legend_rank": row["player2_legend_rank"],

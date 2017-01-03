@@ -261,6 +261,10 @@ class PlayerRecord(FirehoseDeliveryRecord):
 		return self._get_key_from_player_info("deck_id")
 
 	@property
+	def _col_archetype_id(self):
+		return self._get_key_from_player_info("archetype_id")
+
+	@property
 	def _col_deck_list(self):
 		return self._get_key_from_player_info("deck_list")
 

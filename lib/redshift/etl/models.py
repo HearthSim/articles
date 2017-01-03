@@ -30,13 +30,14 @@ game = Table('game', metadata,
 	Column('scenario_id', INT, info={'encode': 'lzo'})
 )
 
-#TODO: Add Archetype_ID
+
 player = Table('player', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
 	Column('player_id', SMALLINT, nullable=False, info={'encode': 'lzo'}),
 	Column('entity_id', SMALLINT, nullable=False, info={'encode': 'lzo'}),
 	Column('deck_id', BIGINT, nullable=False, info={'encode': 'lzo'}),
+	Column('archetype_id', INT, info={'encode': 'lzo'}),
 	Column('final_state', SMALLINT, nullable=False, info={'encode': 'lzo'}),
 	Column('region', SMALLINT, nullable=False, info={'encode': 'lzo'}),
 	Column('account_lo', INT, nullable=False, info={'encode': 'raw'}),
@@ -93,6 +94,24 @@ choices = Table('choices', metadata,
 	Column('source_entity_id', SMALLINT, info={'encode': 'lzo'}),
 )
 
+
+# ***** An Example Options Block *****
+# <Options id="62" ts="2016-12-13T02:30:38.847036-05:00">
+#     <Option index="0" type="2" />
+#     <Option EntityName="Raven Idol" entity="31" index="1" type="3">
+#         <SubOption entity="32" index="0" />
+#         <SubOption entity="33" index="1" />
+#     </Option>
+#     <Option EntityName="Living Roots" entity="101" index="2" type="3">
+#         <SubOption entity="102" index="0">
+#             <Target EntityName="Malfurion Stormrage" entity="82" index="0" />
+#             <Target EntityName="Garrosh Hellscream" entity="84" index="1" />
+#             <Target EntityName="Fel Orc Soulfiend" entity="53" index="2" />
+#             <Target EntityName="Gadgetzan Auctioneer" entity="43" index="3" />
+#         </SubOption>
+#         <SubOption entity="103" index="1" />
+#     </Option>
+# </Options>
 options = Table('options', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
@@ -250,6 +269,7 @@ entity_state = Table('entity_state', metadata,
 	Column('ritual', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.RITUAL}),
 	Column('overload_this_game', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.OVERLOAD_THIS_GAME}),
 	Column('spells_cost_health', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.SPELLS_COST_HEALTH}),
+	Column('transformed_from_card', INT, info={'encode': 'lzo', 'tag': GameTag.TRANSFORMED_FROM_CARD}),
 	Column('cthun', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.CTHUN}),
 	Column('shifting', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.SHIFTING}),
 	Column('jade_golem', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.JADE_GOLEM}),
