@@ -200,9 +200,9 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 
 		# We snapshot the entities in Zones: HAND, PLAY, and SECRET
 		# at the start of each turn, before the player begins taking actions
-		current_step_is_triggers = self.current_step() == Step.MAIN_START_TRIGGERS
-		main_action_next = packet.tag == GameTag.STEP and packet.value == Step.MAIN_ACTION
-		if current_step_is_triggers and main_action_next:
+		current_step_is_main_ready = self.current_step() == Step.MAIN_READY
+		main_start_triggers_next = packet.tag == GameTag.STEP and packet.value == Step.MAIN_START_TRIGGERS
+		if current_step_is_main_ready and main_start_triggers_next:
 			self.snapshot_entities_in_zone(Zone.HAND)
 			self.snapshot_entities_in_zone(Zone.PLAY)
 			self.snapshot_entities_in_zone(Zone.SECRET)
@@ -245,12 +245,13 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 
 	def snapshot_entities_in_zone(self, zone):
 		for entity in self.game.in_zone(zone):
-			self._entity_state_records.append(
-				EntityStateRecord(
-					self.game,
-					entity
+			if entity.id != 1: # Skip the Game Entity
+				self._entity_state_records.append(
+					EntityStateRecord(
+						self.game,
+						entity
+					)
 				)
-			)
 
 	def capture_block_record(self, block):
 		# This should only be called when block eligibility has already been determined.
@@ -451,6 +452,17 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 		if not self._game_info_is_set:
 			raise RuntimeError("Must call set_game_info(...) before getting records.")
 		return [{'Data': rec.to_record() + "\n"} for rec in self._entity_state_records]
+
+	def get_raw_entity_state_records_for_predicate(self, pred):
+		result = []
+		for rec in self._entity_state_records:
+			if pred(rec):
+				result.append(rec)
+		return result
+
+	def get_raw_entity_state_records(self, turn, step):
+		pred = lambda r: r._col_turn == turn and r._col_step == step
+		return self.get_raw_entity_state_records_for_predicate(pred)
 
 	def get_player_records(self):
 		if not self._game_info_is_set:

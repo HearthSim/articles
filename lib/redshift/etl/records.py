@@ -139,6 +139,10 @@ class FirehoseDeliveryRecord(object):
 		else:
 			return None
 
+	def _discover_card_xml_for_entity(self, entity):
+		if hasattr(entity, "card_id") and entity.card_id:
+			return card_db()[entity.card_id]
+
 
 class OptionsRecord(FirehoseDeliveryRecord):
 	REDSHIFT_TABLE = "options"
@@ -561,11 +565,38 @@ class EntityStateRecord(FirehoseDeliveryRecord):
 		self._col_step = game.tags.get(GameTag.STEP, 0)
 		# NOTE: We immediately copy the tags to preserve a point-in-time snapshot of their values
 		self._tags_snapshot = copy.copy(entity.tags)
-		self._controller_id = None
+		# This is a playerID not an entityID
+		self._col_controller_id = None
 		self._controller_final_state = None
 
 		if GameTag.CONTROLLER in entity.tags:
 			self._col_controller_id = entity.tags[GameTag.CONTROLLER]
+
+	def __repr__(self):
+		tmpl = "Turn: %s Step: %s Entity: %s Name: %s Controller: %s Before_Block: %s After_Block: %s"
+		return tmpl % (
+			self._col_turn,
+			self.step_name,
+			self._col_entity_id,
+			self.entity_name,
+			self._col_controller_id,
+			self._before_block_seq_num,
+			self._after_block_seq_num
+		)
+
+	@property
+	def pretty_tags(self):
+		return {GameTag(tag).name: val for tag, val in self._tags_snapshot.items()}
+
+	@property
+	def entity_name(self):
+		card_xml = self._discover_card_xml_for_entity(self._entity)
+		if card_xml:
+			return card_xml.name
+
+	@property
+	def step_name(self):
+		return Step(self._col_step).name
 
 	@property
 	def _col_tags(self):

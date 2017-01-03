@@ -30,6 +30,7 @@ game = Table('game', metadata,
 	Column('scenario_id', INT, info={'encode': 'lzo'})
 )
 
+#TODO: Add Archetype_ID
 player = Table('player', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
@@ -117,7 +118,7 @@ options = Table('options', metadata,
 	ForeignKeyConstraint(['game_id', 'player_id'], ['player.game_id', 'player.player_id'])
 )
 
-
+#TODO: Add TRANSFORMED_FROM_CARD (for Malchezar
 entity_state = Table('entity_state', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
