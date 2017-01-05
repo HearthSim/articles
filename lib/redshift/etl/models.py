@@ -18,16 +18,14 @@ metadata = MetaData()
 
 card = Table('card', metadata,
 	Column('id', String(50), nullable=False, info={'encode': 'raw'}),
-	Column('dbf_id', INT, primary_key=True, info={'encode': 'raw'}),
+	Column('dbf_id', INT, primary_key=True, info={'sortkey': True, 'encode': 'raw'}),
 	Column('name', String(50), nullable=False, info={'encode': 'raw'}),
-
 	Column('card_class', SMALLINT, default=CardClass.INVALID.value, info={'encode': 'raw', 'enum': CardClass}),
 	Column('card_set', SMALLINT, default=CardSet.INVALID.value, info={'encode': 'raw', 'enum': CardSet}),
 	Column('faction', SMALLINT, default=Faction.INVALID.value, info={'encode': 'raw', 'enum': Faction}),
 	Column('race', SMALLINT, default=Race.INVALID.value, info={'encode': 'raw', 'enum': Race}),
 	Column('rarity', SMALLINT, default=Rarity.INVALID.value, info={'encode': 'raw', 'enum': Rarity}),
 	Column('type', SMALLINT, default=CardType.INVALID.value, info={'encode': 'raw', 'enum': CardType}),
-
 	Column('collectible', BOOLEAN, default=False, info={'encode': 'raw'}),
 	Column('battlecry', BOOLEAN, default=False, info={'encode': 'raw'}),
 	Column('divine_shield', BOOLEAN, default=False, info={'encode': 'raw'}),
@@ -42,20 +40,16 @@ card = Table('card', metadata,
 	Column('secret', BOOLEAN, default=False, info={'encode': 'raw'}),
 	Column('taunt', BOOLEAN, default=False, info={'encode': 'raw'}),
 	Column('topdeck', BOOLEAN, default=False, info={'encode': 'raw'}),
-
 	Column('atk', INT, default=0, info={'encode': 'raw'}),
 	Column('health', INT, default=0, info={'encode': 'raw'}),
 	Column('durability', INT, default=0, info={'encode': 'raw'}),
 	Column('cost', INT, default=0, info={'encode': 'raw'}),
 	Column('windfury', INT, default=0, info={'encode': 'raw'}),
-
 	Column('spare_part', BOOLEAN, default=False, info={'encode': 'raw'}),
 	Column('overload', INT, default=0, info={'encode': 'raw'}),
 	Column('spell_damage', INT, default=0, info={'encode': 'raw'}),
 	Column('craftable', BOOLEAN, default=False, info={'encode': 'raw'}),
-
-	redshift_diststyle='ALL',
-	redshift_sortkey='dbf_id'
+	redshift_diststyle='ALL'
 )
 
 game = Table('game', metadata,
