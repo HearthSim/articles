@@ -34,10 +34,9 @@ CARDS_DEST = os.path.join(CARDS_DIR, "__init__.py")
 
 REDSHIFT_ARTIFACT_BUCKET = 'hsreplaynet-redshift-staging'
 
-drop_hearthstonejson_cmd = "DROP LIBRARY hearthstonejson"
 
 load_hearthstonejson_lib = """
-CREATE LIBRARY hearthstonejson LANGUAGE plpythonu
+CREATE OR REPLACE LIBRARY hearthstonejson LANGUAGE plpythonu
 FROM 's3://hsreplaynet-redshift-staging/libs/hearthstonejson.zip'
 CREDENTIALS 'aws_access_key_id={ACCESS_KEY};aws_secret_access_key={SECRET_KEY}';
 """
@@ -92,6 +91,11 @@ CREATE OR REPLACE FUNCTION f_player_turn(turn integer) RETURNS integer IMMUTABLE
 $$ LANGUAGE plpythonu;
 """
 
+f_replay_url = """
+CREATE OR REPLACE FUNCTION f_replay_url(shortid text) RETURNS text IMMUTABLE as $$
+	return r'https://hsreplay.net/replay/' + shortid
+$$ LANGUAGE plpythonu;
+"""
 
 if __name__ == '__main__':
 	# Make sure our artifact creation directories work
@@ -150,8 +154,6 @@ if __name__ == '__main__':
 	)
 
 	# First we must make sure the library is defined and tell Redshift where to find the source on S3
-	# There is no "CREATE OR REPLACE..." for libraries so we must do it in two steps
-	session.execute(drop_hearthstonejson_cmd)
 	session.execute(load_hearthstonejson_cmd)
 
 	# Finally we can start defining all our UDF functions
@@ -161,3 +163,4 @@ if __name__ == '__main__':
 	session.execute(f_card_name)
 	session.execute(f_pretty_decklist)
 	session.execute(f_player_turn)
+	session.execute(f_replay_url)

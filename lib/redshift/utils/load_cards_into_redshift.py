@@ -4,7 +4,7 @@ from hearthstone.enums import CardClass, CardType, CardSet, Faction, Race, Rarit
 from sqlalchemy import create_engine, select
 from redshift.etl.models import card
 
-ENUMS_JSON = "https://api.hearthstonejson.com/v1/enums.json"
+
 CARDS_JSON = "https://api.hearthstonejson.com/v1/latest/enUS/cards.json"
 
 

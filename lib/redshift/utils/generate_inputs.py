@@ -5,8 +5,12 @@ import os
 import json
 import time
 import argparse
+import boto3
 from datetime import datetime, timedelta
 import psycopg2
+
+
+S3 = boto3.client("s3")
 
 
 TEMPLATE = """
@@ -48,6 +52,7 @@ WHERE gg.match_start BETWEEN TIMESTAMP '%s' AND TIMESTAMP '%s'
 GROUP BY gg.id;
 """
 
+EMR_INPUT_DATA_BUCKET = "hearthsim-mrjob"
 
 def dictfetchall(cursor):
 	"Return all rows from a cursor as a dict"
@@ -96,9 +101,11 @@ if __name__ == '__main__':
 	output_file_name = output_file_name.replace(":", "-")
 
 	if args.dir:
-		output_file_name = os.path.join(args.dir, output_file_name)
+		full_output_file_path = os.path.join(args.dir, output_file_name)
+	else:
+		full_output_file_path = output_file_name
 
-	with open(output_file_name, 'w') as output:
+	with open(full_output_file_path, 'w') as output:
 		ROW_TEMPLATE = "%s:%s:%s\n"
 		for row in execute_query(connection, QUERY):
 			# This dict represents the structure the load_redshift.py job expects for the metadata.
@@ -136,4 +143,13 @@ if __name__ == '__main__':
 	duration_seconds = round(job_end_time - job_start_time, 2)
 	summary = "Generated Inputs From: %s To %s (%s Seconds)"
 	print(summary % (start_str, end_str, duration_seconds))
+
+	print("Starting upload to S3...")
+	with open(full_output_file_path, 'rb') as output:
+		S3.put_object(
+			Body=output,
+			Key='data/%s' % output_file_name,
+			Bucket=EMR_INPUT_DATA_BUCKET
+		)
+	print("Finished")
 
