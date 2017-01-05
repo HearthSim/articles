@@ -6,7 +6,10 @@ each record is able to serialize itself as a '|' delimited string which can then
 import copy
 import json
 from datetime import datetime
-from hearthstone.enums import GameTag, BlockType, Step, CardType, BnetRegion
+from hearthstone.enums import (
+	GameTag, BlockType, Step, CardType, BnetRegion, CardClass,
+	Zone, MetaDataType, OptionType, BnetGameType, PlayState, ChoiceType
+)
 from hearthstone import entities, cardxml
 from .models import metadata
 from .firehose import FirehoseOutput
@@ -19,6 +22,12 @@ def card_db():
 		db, _ = cardxml.load()
 		_CARD_DATA_CACHE["db"] = db
 	return _CARD_DATA_CACHE["db"]
+
+
+def dbf_db():
+	if "dbf_db" not in _CARD_DATA_CACHE:
+		_CARD_DATA_CACHE["dbf_db"] = {v.dbf_id: v for k,v in card_db().items()}
+	return _CARD_DATA_CACHE["dbf_db"]
 
 
 # This is how block.id PK values are generated:
@@ -128,9 +137,6 @@ class FirehoseDeliveryRecord(object):
 	def _discover_dbf_id_for_entity(self, entity):
 		if entity:
 			dbf_id = None
-			# Check for Shifter Zerus
-			if GameTag.TRANSFORMED_FROM_CARD in entity.tags:
-				dbf_id = entity.tags[GameTag.TRANSFORMED_FROM_CARD]
 
 			if hasattr(entity, "card_id") and entity.card_id:
 				dbf_id = card_db()[entity.card_id].dbf_id
@@ -181,6 +187,49 @@ class OptionsRecord(FirehoseDeliveryRecord):
 		self._col_turn = self._game.tags.get(GameTag.TURN, 0)
 		self._col_step = self._game.tags.get(GameTag.STEP, 0)
 
+	def __repr__(self):
+		tmpl = "Id: %s OptionEntity: %s Name: %s Type: %s - SubOption: %s Name: %s Target: %s Sent: %s"
+		return tmpl % (
+			self._col_options_block_id,
+			self._col_option_entity_id,
+			self.option_entity_name,
+			self.option_type_name,
+			self._col_suboption_entity_id,
+			self.suboption_entity_name,
+			self.target_entity_name,
+			self._col_sent
+		)
+
+	@property
+	def option_type_name(self):
+		return OptionType(self._col_option_type).name
+
+	@property
+	def option_entity_name(self):
+		entity = self._game.find_entity_by_id(self._col_option_entity_id)
+		card_xml = self._discover_card_xml_for_entity(entity)
+		if card_xml:
+			return card_xml.name
+		return 'N/A'
+
+	@property
+	def target_entity_name(self):
+		if self._col_target_entity_id:
+			entity = self._game.find_entity_by_id(self._col_target_entity_id)
+			card_xml = self._discover_card_xml_for_entity(entity)
+			if card_xml:
+				return card_xml.name
+		return 'N/A'
+
+	@property
+	def suboption_entity_name(self):
+		if self._col_suboption_entity_id:
+			entity = self._game.find_entity_by_id(self._col_suboption_entity_id)
+			card_xml = self._discover_card_xml_for_entity(entity)
+			if card_xml:
+				return card_xml.name
+		return 'N/A'
+
 	@property
 	def _col_player_final_state(self):
 		if self._col_player_id:
@@ -225,6 +274,41 @@ class ChoicesRecord(FirehoseDeliveryRecord):
 		self._col_entity_id = choice_entity_id
 		self._col_chosen = False
 
+	def __repr__(self):
+		tmpl = "Type: %s ChoiceID: %s PlayerEntity: %s Source: %s ChoiceEntity: %s Name: %s Chosen: %s"
+		return tmpl % (
+			self.choice_type_name,
+			self._col_choices_block_id,
+			self._col_player_entity_id,
+			self.source_entity_name,
+			self._col_entity_id,
+			self.choice_entity_name,
+			self._col_chosen
+		)
+
+	@property
+	def choice_type_name(self):
+		return ChoiceType(self._col_choice_type).name
+
+	@property
+	def source_entity_name(self):
+		entity = self._game.find_entity_by_id(self._packet.source)
+		if entity.id == 1:
+			return "GameEntity"
+
+		card_xml = self._discover_card_xml_for_entity(entity)
+		if card_xml:
+			return card_xml.name
+		return ''
+
+	@property
+	def choice_entity_name(self):
+		entity = self._game.find_entity_by_id(self._col_entity_id)
+		card_xml = self._discover_card_xml_for_entity(entity)
+		if card_xml:
+			return card_xml.name
+		return ''
+
 	@property
 	def _col_block_id(self):
 		return to_block_id(self._block.block_sequence_num, self._col_game_id)
@@ -255,6 +339,25 @@ class PlayerRecord(FirehoseDeliveryRecord):
 		self._col_player_id = self._player_packet.player_id
 		self._col_entity_id = self._player_packet.entity
 		self._col_account_lo = self._player_packet.lo
+
+	def __repr__(self):
+		tmpl = "Player: %s Entity: %s FinalState: %s Class: %s Rank: %s LegendRank: %s"
+		return tmpl % (
+			self._col_player_id,
+			self._col_entity_id,
+			self.final_state_name,
+			self.player_class_name,
+			self._col_rank,
+			self._col_legend_rank,
+		)
+
+	@property
+	def player_class_name(self):
+		return CardClass(self._col_player_class).name
+
+	@property
+	def final_state_name(self):
+		return PlayState(self._col_final_state).name
 
 	@property
 	def _col_deck_id(self):
@@ -347,6 +450,24 @@ class GameRecord(FirehoseDeliveryRecord):
 		self._game = game
 		self._game_packet = game_packet
 
+	def __repr__(self):
+		tmpl = "Id: %s Date: %s Region: %s Type: %s Turns: %s"
+		return tmpl % (
+			self._col_id,
+			self._col_game_date,
+			self.region_name,
+			self.game_type_name,
+			self._col_num_turns,
+		)
+
+	@property
+	def region_name(self):
+		return BnetRegion(self._col_region).name
+
+	@property
+	def game_type_name(self):
+		return BnetGameType(self._col_game_type).name
+
 	@property
 	def _col_id(self):
 		return self._col_game_id
@@ -357,6 +478,10 @@ class GameRecord(FirehoseDeliveryRecord):
 			return self._game_info["match_start"]
 		else:
 			return None
+
+	@property
+	def _col_shortid(self):
+		return self._get_info_info_val("shortid")
 
 	@property
 	def _col_game_type(self):
@@ -402,6 +527,28 @@ class BlockInfoRecord(FirehoseDeliveryRecord):
 		self._col_info_entity_id = info_entity_id
 		self._col_data = self._packet.data
 
+	def __repr__(self):
+		tmpl = "Block: %s Type: %s Entity: %s Name: %s Data: %s"
+		return tmpl % (
+			self._containing_block.block_sequence_num,
+			self.metadata_type_name,
+			self._col_info_entity_id,
+			self.info_entity_name,
+			self._col_data,
+		)
+
+	@property
+	def info_entity_name(self):
+		info_entity = self._game.find_entity_by_id(self._col_info_entity_id)
+		card_xml = self._discover_card_xml_for_entity(info_entity)
+		if card_xml:
+			return card_xml.name
+		return 'NONE'
+
+	@property
+	def metadata_type_name(self):
+		return MetaDataType(self._col_meta_data_type).name
+
 	@property
 	def _col_block_id(self):
 		return to_block_id(self._containing_block.block_sequence_num, self._col_game_id)
@@ -423,6 +570,7 @@ def is_card_block(game, block):
 
 
 def is_begin_mulligan_block(game, block):
+	# We need this as a containing block for the choices packets related to Mulligans
 	entity = game.find_entity_by_id(block.entity)
 	if GameTag.STEP in game.tags:
 		is_begin_mulligan = game.tags[GameTag.STEP] == Step.BEGIN_MULLIGAN
@@ -433,6 +581,7 @@ def is_begin_mulligan_block(game, block):
 
 
 def is_player_main_start(game, block):
+	# We record this block to make sure that we capture which card was drawn from the deck
 	entity = game.find_entity_by_id(block.entity)
 	if GameTag.STEP in game.tags:
 		is_main_start = game.tags[GameTag.STEP] == Step.MAIN_START
@@ -469,9 +618,53 @@ class BlockRecord(FirehoseDeliveryRecord):
 
 		# We must capture the entity's controller immediately, since it can change.
 		if GameTag.CONTROLLER in self._block_entity.tags:
-			self._col_entity_player_id = self._block_entity.tags[GameTag.CONTROLLER]
+			self._col_entity_controller = self._block_entity.tags[GameTag.CONTROLLER]
 		else:
-			self._col_entity_player_id = None
+			self._col_entity_controller = None
+
+	def __repr__(self):
+		tmpl = "Turn: %s Step: %s Type: %s Id: %s Parent: %s Controller: %s Entity: %s Name: %s Target: %s"
+		return tmpl % (
+			self._col_turn,
+			self.step_name,
+			self.block_type_name,
+			self._block.block_sequence_num,
+			self.parent_block_id,
+			self._col_entity_controller,
+			self._col_entity_id,
+			self.entity_name,
+			self.target_name,
+		)
+
+	@property
+	def parent_block_id(self):
+		if self._parent_block:
+			return self._parent_block.block_sequence_num
+		else:
+			return 'NONE'
+
+	@property
+	def entity_name(self):
+		card_xml = self._discover_card_xml_for_entity(self._block_entity)
+		if card_xml:
+			return card_xml.name
+
+	@property
+	def target_name(self):
+		if self._block.target:
+			target_entity = self._game.find_entity_by_id(self._block.target)
+			card_xml = self._discover_card_xml_for_entity(target_entity)
+			if card_xml:
+				return card_xml.name
+		return 'NONE'
+
+	@property
+	def step_name(self):
+		return Step(self._col_step).name
+
+	@property
+	def block_type_name(self):
+		return BlockType(self._col_block_type).name
 
 	@property
 	def _col_id(self):
@@ -576,31 +769,63 @@ class EntityStateRecord(FirehoseDeliveryRecord):
 		if GameTag.CONTROLLER in entity.tags:
 			self._col_controller_id = entity.tags[GameTag.CONTROLLER]
 
+		# Attempt to resolve the dbf_id immediately, in case it's shifter zerus and going to change.
+		self._cached_dbf_id = self._discover_dbf_id_for_entity(self._entity)
+
+
 	def __repr__(self):
-		tmpl = "Turn: %s Step: %s Entity: %s Name: %s Controller: %s Before_Block: %s After_Block: %s"
+		tmpl = "Turn: %s Step: %s Zone: %s Entity: %s Name: %s Controller: %s Before_Block: %s After_Block: %s Final: %s"
 		return tmpl % (
 			self._col_turn,
 			self.step_name,
+			self.zone_name,
 			self._col_entity_id,
 			self.entity_name,
 			self._col_controller_id,
 			self._before_block_seq_num,
-			self._after_block_seq_num
+			self._after_block_seq_num,
+			self.final_state_name
 		)
 
 	@property
+	def _col_dbf_id(self):
+		if self._cached_dbf_id:
+			return self._cached_dbf_id
+		elif hasattr(self._entity, "_is_shifter_zerus") and getattr(self._entity, "_is_shifter_zerus"):
+			# If we don't have a _cached_dbf_id then it was in the opponent's hand
+			# Which means we don't know what it's "true" DBF ID was in hand before it was played.
+			# Returning the Zerus DBF_ID here makes the behavior consistent with Joust
+			ZERUS_DBF_ID = 38475
+			return ZERUS_DBF_ID
+		else:
+			return self._discover_dbf_id_for_entity(self._entity)
+
+	@property
+	def final_state_name(self):
+		return PlayState(self._col_controller_final_state).name
+
+	@property
 	def pretty_tags(self):
-		return {GameTag(tag).name: val for tag, val in self._tags_snapshot.items()}
+		return {GameTag(tag).name: val for tag, val in self._tags_snapshot.items() if tag in GameTag.__members__.values()}
 
 	@property
 	def entity_name(self):
-		card_xml = self._discover_card_xml_for_entity(self._entity)
-		if card_xml:
-			return card_xml.name
+		if self._col_dbf_id in dbf_db():
+			return dbf_db()[self._col_dbf_id].name
+		else:
+			return 'N/A'
 
 	@property
 	def step_name(self):
 		return Step(self._col_step).name
+
+	@property
+	def zone_name(self):
+		zone = self._tags_snapshot.get(GameTag.ZONE, None)
+		if zone:
+			return Zone(zone).name
+		else:
+			return ''
 
 	@property
 	def _col_tags(self):
@@ -657,10 +882,6 @@ class EntityStateRecord(FirehoseDeliveryRecord):
 			return None
 
 	@property
-	def _col_dbf_id(self):
-		return self._discover_dbf_id_for_entity(self._entity)
-
-	@property
 	def _col_class(self):
 		# This tag is not always set, but it's valuable to have populated.
 		if hasattr(self._entity, "card_id") and self._entity.card_id:
@@ -673,5 +894,13 @@ class EntityStateRecord(FirehoseDeliveryRecord):
 		# This tag is not always set, but it's valuable to have populated.
 		if hasattr(self._entity, "card_id") and self._entity.card_id:
 			return card_db()[self._entity.card_id].card_set.value
+		else:
+			return None
+
+	@property
+	def _col_cardrace(self):
+		# This tag is not always set, but it's valuable to have populated.
+		if hasattr(self._entity, "card_id") and self._entity.card_id:
+			return card_db()[self._entity.card_id].race.value
 		else:
 			return None

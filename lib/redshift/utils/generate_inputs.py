@@ -12,7 +12,8 @@ import psycopg2
 TEMPLATE = """
 SELECT
     gg.id AS game_id,
-    max(gr.replay_xml) AS replay_xml,
+    left(right(max(gr.replay_xml), 35), 22) AS shortid,
+    max(gr.replay_xml) as replay_xml,
     gg.game_type,
     gg.scenario_id,
     gg.ladder_season,
@@ -103,6 +104,7 @@ if __name__ == '__main__':
 			# This dict represents the structure the load_redshift.py job expects for the metadata.
 			metadata={
 				"game_id": row["game_id"],
+				"shortid": row["shortid"],
 				"game_type": row["game_type"],
 				"scenario_id": row["scenario_id"],
 				"ladder_season": row["ladder_season"],

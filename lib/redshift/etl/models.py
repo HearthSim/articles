@@ -19,6 +19,7 @@ metadata = MetaData()
 
 game = Table('game', metadata,
 	Column('id', BIGINT, primary_key=True, info={'distkey': True, 'encode': 'lzo'}),
+	Column('shortid', String(22), nullable=False, info={'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
 	Column('match_start', DATETIME, nullable=False, info={'encode': 'lzo'}),
 	Column('game_type', SMALLINT, nullable=False, info={'encode': 'lzo'}),
@@ -29,7 +30,6 @@ game = Table('game', metadata,
 	Column('brawl_season', INT, info={'encode': 'lzo'}),
 	Column('scenario_id', INT, info={'encode': 'lzo'})
 )
-
 
 player = Table('player', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
@@ -64,11 +64,11 @@ block = Table('block', metadata,
 	Column('turn', SMALLINT, nullable=False, info={'encode': 'lzo'}),
 	Column('step', SMALLINT, nullable=False, info={'encode': 'lzo'}),
 	Column('entity_dbf_id', INT, info={'encode': 'lzo'}),
-	Column('entity_player_id', SMALLINT, info={'encode': 'lzo'}),
+	Column('entity_controller', SMALLINT, info={'encode': 'lzo'}),
 	Column('parent_id', BIGINT, info={'encode': 'lzo'}),
 	Column('target_entity_id', SMALLINT, info={'encode': 'lzo'}),
 	Column('target_entity_dbf_id', INT, info={'encode': 'lzo'}),
-	ForeignKeyConstraint(['game_id', 'entity_player_id'], ['player.game_id', 'player.player_id'])
+	ForeignKeyConstraint(['game_id', 'entity_controller'], ['player.game_id', 'player.player_id'])
 )
 
 block_info = Table('block_info', metadata,
@@ -94,24 +94,6 @@ choices = Table('choices', metadata,
 	Column('source_entity_id', SMALLINT, info={'encode': 'lzo'}),
 )
 
-
-# ***** An Example Options Block *****
-# <Options id="62" ts="2016-12-13T02:30:38.847036-05:00">
-#     <Option index="0" type="2" />
-#     <Option EntityName="Raven Idol" entity="31" index="1" type="3">
-#         <SubOption entity="32" index="0" />
-#         <SubOption entity="33" index="1" />
-#     </Option>
-#     <Option EntityName="Living Roots" entity="101" index="2" type="3">
-#         <SubOption entity="102" index="0">
-#             <Target EntityName="Malfurion Stormrage" entity="82" index="0" />
-#             <Target EntityName="Garrosh Hellscream" entity="84" index="1" />
-#             <Target EntityName="Fel Orc Soulfiend" entity="53" index="2" />
-#             <Target EntityName="Gadgetzan Auctioneer" entity="43" index="3" />
-#         </SubOption>
-#         <SubOption entity="103" index="1" />
-#     </Option>
-# </Options>
 options = Table('options', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
@@ -137,7 +119,6 @@ options = Table('options', metadata,
 	ForeignKeyConstraint(['game_id', 'player_id'], ['player.game_id', 'player.player_id'])
 )
 
-#TODO: Add TRANSFORMED_FROM_CARD (for Malchezar
 entity_state = Table('entity_state', metadata,
 	Column('game_id', None, ForeignKey('game.id'), nullable=False, info={'distkey': True, 'encode': 'lzo'}),
 	Column('game_date', DATE, nullable=False, info={'sortkey': True, 'encode': 'lzo'}),
@@ -159,7 +140,7 @@ entity_state = Table('entity_state', metadata,
 	Column('health', INT, info={'encode': 'lzo', 'tag': GameTag.HEALTH}),
 	Column('armor', INT, info={'encode': 'lzo', 'tag': GameTag.ARMOR}),
 	Column('durability', INT, info={'encode': 'lzo', 'tag': GameTag.DURABILITY}),
-	Column('damage', INT, info={'encode': 'lzo', 'tag': GameTag.DAMAGE}),
+	Column('damage', INT, default=0, info={'encode': 'lzo', 'tag': GameTag.DAMAGE}),
 	Column('taunt', BOOLEAN, info={'encode': 'raw', 'tag': GameTag.TAUNT}),
 	Column('stealth', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.STEALTH}),
 	Column('divine_shield', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.DIVINE_SHIELD}),
@@ -185,7 +166,6 @@ entity_state = Table('entity_state', metadata,
 	Column('exhausted', BOOLEAN, info={'encode': 'raw', 'tag': GameTag.EXHAUSTED}),
 	Column('owner', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.OWNER}),
 	Column('elite', BOOLEAN, info={'encode': 'runlength', 'tag': GameTag.ELITE}),
-	Column('next_step', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.NEXT_STEP}),
 	Column('class', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.CLASS}),
 	Column('card_set', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.CARD_SET}),
 	Column('cardrace', SMALLINT, info={'encode': 'lzo', 'tag': GameTag.CARDRACE}),

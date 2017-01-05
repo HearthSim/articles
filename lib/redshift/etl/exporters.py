@@ -7,6 +7,7 @@ from collections import defaultdict
 from hearthstone.enums import Zone, GameTag, Step, BnetRegion
 from hearthstone.hslog.export import EntityTreeExporter
 from hearthstone.hslog import packets
+from hearthstone import entities
 from .records import (
 	card_db, GameRecord, PlayerRecord, BlockRecord,
 	BlockInfoRecord, ChoicesRecord, OptionsRecord, EntityStateRecord
@@ -32,6 +33,7 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 		self._region = None
 		self._current_options_packet = None
 		self._players_with_visible_options = set()
+		self._most_recent_main_ready_trigger_block = None
 		super(RedshiftPublishingExporter, self).__init__(packet_tree)
 
 	def handle_options(self, packet):
@@ -54,6 +56,7 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 			self._current_options_packet = None
 
 	def _generate_option_records(self, stack, options_packet, sent_packet):
+		# We are recursing down the options tree depth first
 		stack.append(options_packet)
 		for option in options_packet.options:
 			if not option.options:
@@ -64,12 +67,12 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 
 	def _make_options_record(self, stack, option, sent_packet):
 		options_block_id = stack[0].id
-		is_sent = sent_packet.option == option.id
 		sent_position = sent_packet.position
 		sent_suboption = sent_packet.suboption
 		sent_target = sent_packet.target
 		if len(stack) == 1:
 			# This is a top-level option without sub-options or targets
+			is_sent = sent_packet.option == option.id
 			self._option_records.append(OptionsRecord(
 				self.game,
 				options_block_id,
@@ -90,6 +93,7 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 			first_level_option = stack[1]
 			if option.optype == 'subOption':
 				# This is a sub-option without targets like Living Root Saplings
+				is_sent = sent_packet.option == first_level_option.id and option.id == sent_suboption
 				self._option_records.append(OptionsRecord(
 					self.game,
 					options_block_id,
@@ -107,6 +111,7 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 				))
 			else:
 				# This is a top level block with targets
+				is_sent = sent_packet.option == first_level_option.id and sent_target == option.entity
 				self._option_records.append(OptionsRecord(
 					self.game,
 					options_block_id,
@@ -126,6 +131,7 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 			# This is a "choose one" sub-option with targets (e.g. Wrath, Living Roots)
 			first_level_option = stack[1]
 			sub_option = stack[2]
+			is_sent = sent_packet.option == first_level_option.id and sub_option.id == sent_suboption and sent_target == option.entity
 			self._option_records.append(OptionsRecord(
 				self.game,
 				options_block_id,
@@ -187,6 +193,19 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 		if block.is_eligible_for_record:
 			self.capture_after_block_entity_state_records(block)
 
+		if self._is_main_ready_trigger_block(block):
+			# We keep track of this so we can use it for an after_block ID when we snapshot the board state
+			self._most_recent_main_ready_trigger_block = block
+
+	def _is_main_ready_trigger_block(self, block):
+		entity = self.game.find_entity_by_id(block.entity)
+		if GameTag.STEP in self.game.tags:
+			is_main_ready = self.game.tags[GameTag.STEP] == Step.MAIN_READY
+			is_player_entity = isinstance(entity, entities.Player)
+			return is_main_ready and is_player_entity
+		else:
+			return False
+
 	def handle_show_entity(self, packet):
 		tags = dict(packet.tags)
 		if GameTag.ZONE in tags:
@@ -194,27 +213,32 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 
 		super(RedshiftPublishingExporter, self).handle_show_entity(packet)
 
+		# Custom handling for identifying entities that come from Zerus
+		entity = self.game.find_entity_by_id(packet.entity)
+		if GameTag.TRANSFORMED_FROM_CARD in entity.tags:
+			ZERUS_DBF_ID = 38475
+			if entity.tags[GameTag.TRANSFORMED_FROM_CARD] == ZERUS_DBF_ID:
+				entity._is_shifter_zerus = True
+
 	def handle_tag_change(self, packet):
 		if packet.tag == GameTag.ZONE:
 			self.record_zone_entrance(packet.entity)
 
 		# We snapshot the entities in Zones: HAND, PLAY, and SECRET
 		# at the start of each turn, before the player begins taking actions
+		# We snapshot after the current player's MAIN_READY TRIGGER because that's when Blizz seems
+		# to be collecting statistics.
+		# NOTE: This is before the next card has been drawn, however since we also snapshot
+		# the MAIN_START block for the current player we have access to which card was drawn as well.
+
 		current_step_is_main_ready = self.current_step() == Step.MAIN_READY
 		main_start_triggers_next = packet.tag == GameTag.STEP and packet.value == Step.MAIN_START_TRIGGERS
 		if current_step_is_main_ready and main_start_triggers_next:
-			self.snapshot_entities_in_zone(Zone.HAND)
-			self.snapshot_entities_in_zone(Zone.PLAY)
-			self.snapshot_entities_in_zone(Zone.SECRET)
+			self.snapshot_entities_in_zone(Zone.HAND, after_block=self._most_recent_main_ready_trigger_block)
+			self.snapshot_entities_in_zone(Zone.PLAY, after_block=self._most_recent_main_ready_trigger_block)
+			self.snapshot_entities_in_zone(Zone.SECRET, after_block=self._most_recent_main_ready_trigger_block)
 
 		super(RedshiftPublishingExporter, self).handle_tag_change(packet)
-
-		is_turn_one = self.current_turn() == 1
-		is_main_ready = packet.tag == GameTag.STEP and packet.value == Step.MAIN_READY
-		# On Turn 1, we snapshot Zone.HAND before the first card is drawn
-		# for mulligan statistics
-		if is_turn_one and is_main_ready:
-			self.snapshot_entities_in_zone(Zone.HAND)
 
 	def handle_full_entity(self, packet):
 		super(RedshiftPublishingExporter, self).handle_full_entity(packet)
@@ -243,15 +267,22 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 					if choice_record._col_entity_id == chosen_entity:
 						choice_record._col_chosen = True
 
-	def snapshot_entities_in_zone(self, zone):
+	def snapshot_entities_in_zone(self, zone, after_block=None, before_block=None):
 		for entity in self.game.in_zone(zone):
 			if entity.id != 1: # Skip the Game Entity
-				self._entity_state_records.append(
-					EntityStateRecord(
+				if after_block:
+					es_record = EntityStateRecord(
+						self.game,
+						entity,
+						after_block_seq_num=after_block.block_sequence_num
+					)
+				else:
+					es_record = EntityStateRecord(
 						self.game,
 						entity
 					)
-				)
+
+				self._entity_state_records.append(es_record)
 
 	def capture_block_record(self, block):
 		# This should only be called when block eligibility has already been determined.
@@ -347,7 +378,6 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 			if not self._last_ts_observed or self._last_ts_observed < block.ts:
 				self._last_ts_observed = block.ts
 
-
 	def set_block_eligibility(self, block):
 		# The BlockRecord class owns the logic for which blocks are eligible
 		block.is_eligible_for_record = False
@@ -438,48 +468,59 @@ class RedshiftPublishingExporter(EntityTreeExporter):
 		entity = self.game.find_entity_by_id(entity_id)
 		entity.entered_zone_on = self.current_turn()
 
-	def get_block_records(self):
+	def get_block_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._block_records, as_data_records, filter_predicate)
+
+	def get_block_info_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._block_info_records, as_data_records, filter_predicate)
+
+	def get_entity_state_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._entity_state_records, as_data_records, filter_predicate)
+
+	def get_player_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._player_records, as_data_records, filter_predicate)
+
+	def get_game_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._game_records, as_data_records, filter_predicate)
+
+	def get_choice_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._choice_records, as_data_records, filter_predicate)
+
+	def get_option_records(self, as_data_records=True, filter_predicate=None):
+		return self._get_records(self._option_records, as_data_records, filter_predicate)
+
+	def make_turn_step_predicate(self, turn, step):
+		return lambda r: r._col_turn == turn and r._col_step == step
+
+	def get_entity_states_for_entity(self, entity_id):
+		pred = lambda r: r._col_entity_id == entity_id
+		return self.get_entity_state_records(filter_predicate=pred, as_data_records=False)
+
+	def get_block_record_for_seq(self, sequence_number):
+		return self.get_block_records(
+			filter_predicate=lambda b: b._block.block_sequence_num == sequence_number,
+			as_data_records=False
+		)[0]
+
+	def get_block_info_records_for_seq(self, sequence_number):
+		return self.get_block_info_records(
+			filter_predicate=lambda b: b._containing_block.block_sequence_num == sequence_number,
+			as_data_records=False
+		)
+
+	def _get_records(self, record_source, as_data_records=True, filter_predicate=None):
 		if not self._game_info_is_set:
 			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._block_records]
 
-	def get_block_info_records(self):
-		if not self._game_info_is_set:
-			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._block_info_records]
+		if filter_predicate:
+			result_set = []
+			for rec in record_source:
+				if filter_predicate(rec):
+					result_set.append(rec)
+		else:
+			result_set = record_source
 
-	def get_entity_state_records(self):
-		if not self._game_info_is_set:
-			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._entity_state_records]
-
-	def get_raw_entity_state_records_for_predicate(self, pred):
-		result = []
-		for rec in self._entity_state_records:
-			if pred(rec):
-				result.append(rec)
-		return result
-
-	def get_raw_entity_state_records(self, turn, step):
-		pred = lambda r: r._col_turn == turn and r._col_step == step
-		return self.get_raw_entity_state_records_for_predicate(pred)
-
-	def get_player_records(self):
-		if not self._game_info_is_set:
-			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._player_records]
-
-	def get_game_records(self):
-		if not self._game_info_is_set:
-			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._game_records]
-
-	def get_choice_records(self):
-		if not self._game_info_is_set:
-			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._choice_records]
-
-	def get_option_records(self):
-		if not self._game_info_is_set:
-			raise RuntimeError("Must call set_game_info(...) before getting records.")
-		return [{'Data': rec.to_record() + "\n"} for rec in self._option_records]
+		if as_data_records:
+			return [{'Data': rec.to_record() + "\n"} for rec in record_source]
+		else:
+			return result_set
