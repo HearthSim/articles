@@ -19,7 +19,7 @@ class BaseS3Protocol:
 
 	def read_s3(self, bucket, key):
 		obj = S3.get_object(Bucket=bucket, Key=key)
-		log_str = decompress(obj["Body"].read()).decode("utf8")
+		log_str = decompress(obj["Body"].read())
 		out = BytesIO()
 		out.write(log_str)
 		out.seek(0)
