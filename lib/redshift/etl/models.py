@@ -8,7 +8,7 @@ To generate the DDL statements needed by the server-provisioning repository's bo
 $ python models.py
 
 """
-from hearthstone.enums import GameTag
+from hearthstone.enums import GameTag, CardClass, CardSet, Faction, Race, Rarity, CardType
 from sqlalchemy import (
 	Table, Column, BOOLEAN, SMALLINT, INT, BIGINT, PrimaryKeyConstraint, ForeignKeyConstraint,
 	String, MetaData, ForeignKey, DATE, DATETIME, create_engine
@@ -16,6 +16,47 @@ from sqlalchemy import (
 
 metadata = MetaData()
 
+card = Table('card', metadata,
+	Column('id', String(50), nullable=False, info={'encode': 'raw'}),
+	Column('dbf_id', INT, primary_key=True, info={'encode': 'raw'}),
+	Column('name', String(50), nullable=False, info={'encode': 'raw'}),
+
+	Column('card_class', SMALLINT, default=CardClass.INVALID.value, info={'encode': 'raw', 'enum': CardClass}),
+	Column('card_set', SMALLINT, default=CardSet.INVALID.value, info={'encode': 'raw', 'enum': CardSet}),
+	Column('faction', SMALLINT, default=Faction.INVALID.value, info={'encode': 'raw', 'enum': Faction}),
+	Column('race', SMALLINT, default=Race.INVALID.value, info={'encode': 'raw', 'enum': Race}),
+	Column('rarity', SMALLINT, default=Rarity.INVALID.value, info={'encode': 'raw', 'enum': Rarity}),
+	Column('type', SMALLINT, default=CardType.INVALID.value, info={'encode': 'raw', 'enum': CardType}),
+
+	Column('collectible', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('battlecry', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('divine_shield', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('deathrattle', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('elite', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('evil_glow', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('inspire', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('forgetful', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('one_turn_effect', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('poisonous', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('ritual', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('secret', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('taunt', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('topdeck', BOOLEAN, default=False, info={'encode': 'raw'}),
+
+	Column('atk', INT, default=0, info={'encode': 'raw'}),
+	Column('health', INT, default=0, info={'encode': 'raw'}),
+	Column('durability', INT, default=0, info={'encode': 'raw'}),
+	Column('cost', INT, default=0, info={'encode': 'raw'}),
+	Column('windfury', INT, default=0, info={'encode': 'raw'}),
+
+	Column('spare_part', BOOLEAN, default=False, info={'encode': 'raw'}),
+	Column('overload', INT, default=0, info={'encode': 'raw'}),
+	Column('spell_damage', INT, default=0, info={'encode': 'raw'}),
+	Column('craftable', BOOLEAN, default=False, info={'encode': 'raw'}),
+
+	redshift_diststyle='ALL',
+	redshift_sortkey='dbf_id'
+)
 
 game = Table('game', metadata,
 	Column('id', BIGINT, primary_key=True, info={'distkey': True, 'encode': 'lzo'}),

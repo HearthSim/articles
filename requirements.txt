@@ -7,3 +7,4 @@ psycopg2
 sqlalchemy
 sqlalchemy-redshift
 pytest
+requests
