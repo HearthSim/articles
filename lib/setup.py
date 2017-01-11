@@ -19,7 +19,7 @@ setup(
 	packages=find_packages(),
 	author="Andrew Wilson",
 	author_email="andrew@hearthsim.net",
-	description="Mapreduce and Redshift libraries for analytics on HSReplay.xml files in Python",
+	description="Mapreduce libraries for analytics on HSReplay.xml files in Python",
 	classifiers=CLASSIFIERS,
 	download_url="https://github.com/HearthSim/replay-analysis/tarball/master",
 	license="All Rights Reserved",
