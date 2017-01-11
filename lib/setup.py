@@ -24,5 +24,5 @@ setup(
 	download_url="https://github.com/HearthSim/replay-analysis/tarball/master",
 	license="All Rights Reserved",
 	url="https://github.com/HearthSim/replay-analysis",
-	zip_safe=True,
+	zip_safe=False,
 )
