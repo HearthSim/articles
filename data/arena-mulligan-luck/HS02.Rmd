@@ -1,0 +1,91 @@
+---
+title: "Mulligan Luck in the Arena"
+output:
+  html_notebook: default
+  html_document: default
+---
+
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(scales)
+
+data <- read.csv('rawData/Arena Turn 1 Play Stats - 280k games.csv')
+
+hsColors <- c('#FF7D0A', '#ABD473', '#69CCF0', '#F58CBA',
+              '#000000', '#FFF569', '#0070DE', '#9482C9', '#C79C6E')
+
+#Base win rates
+baseClassWinRate <- data %>%
+  group_by(player_class) %>%
+  summarise(baseRate = sum(games_won) / sum(games_played),
+            n = sum(games_played)) %>%
+  arrange(desc(baseRate))
+```
+
+|Player Class|Base Win-Rate|Games Played|
+|------------|-------------|------------|
+|Warlock|60.1%|51924|
+|Priest|56.9%|33313|
+|Rogue|56.3%|30519|
+|Paladin|56.0%|39033|
+|Mage|55.5%|56989|
+|Hunter|54.5%|17865|
+|Shaman|54.1%|26655|
+|Warrior|52.1%|11015|
+|Druid|51.0%|12557|
+
+```{r, echo=FALSE, message=FALSE}
+#Win rates by luck and class
+data %>%
+  group_by(player_class,
+           Luck = ifelse(went_first & card_played != 'NULL', '2xLucky',
+                         ifelse(went_first, '1xLucky', '0xlucky'))) %>%
+  summarise(rate = sum(games_won) / sum(games_played),
+            play = sum(games_played)) %>%
+  inner_join(baseClassWinRate, by = "player_class") %>%
+  mutate(Improvement = rate - baseRate) %>%
+  ggplot(aes(x = Luck,
+             y = Improvement,
+             fill = player_class,
+             alpha = play)) +
+  geom_bar(stat = 'identity', position = 'dodge', color = 'black') +
+  facet_grid(~ player_class, scales = 'free_x') +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1)) +
+  scale_y_continuous(labels = percent) +
+  scale_fill_manual(values = hsColors) +
+  guides(fill=FALSE, alpha=FALSE) +
+  ggtitle('Improvement from base win-rate by players luck.',
+          subtitle = '2xLuck: Goes 1st, plays 1 drop. 1xLuck: Goes 1st, no 1 drop. 0xLuck: Goes 2nd.')
+```
+
+```{r, echo=FALSE, message=FALSE, fig.height=10, fig.width=7}
+#Base win rates by card played
+data %>%
+  group_by(player_class,
+           card_played) %>%
+  filter(card_played != 'NULL') %>%
+  summarise(win = sum(games_won),
+            play = sum(games_played),
+            rate = sum(games_won) / sum(games_played)) %>%
+  inner_join(baseClassWinRate, by = "player_class") %>%
+  mutate(improvement = rate - baseRate,
+         playPerClass = play / n) %>%
+  filter(play >= 300) %>%
+  ggplot(aes(x = reorder(card_played, improvement),
+             y = improvement,
+             fill = player_class,
+             alpha = playPerClass)) +
+  geom_bar(stat = 'identity',
+           color = 'black') +
+  theme(axis.text.x = element_text(angle = 22, hjust = 1)) +
+  facet_wrap(~ player_class, scales = 'free_x') +
+  scale_y_continuous(labels = percent) +
+  scale_fill_manual(values = hsColors,
+                    guide = guide_legend(title = "Player Class")) +
+  guides(alpha=FALSE, fill=FALSE) +
+  xlab('Card Played') +
+  ggtitle('Improvement from base win-rate by card played when 2xLucky.',
+          subtitle = 'Opacity proportional to likelyhood of playing card within the class.')
+
+```
