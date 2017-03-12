@@ -1,0 +1,201 @@
+player_class,card_name,times_played
+DRUID,Shapeshift,742071
+SHAMAN,Totemic Call,696637
+WARLOCK,Life Tap,477786
+ROGUE,Dagger Mastery,469123
+MAGE,Fireblast,421557
+PRIEST,Lesser Heal,336840
+WARRIOR,Armor Up!,331203
+DRUID,Jade Idol,324478
+DRUID,Innervate,275532
+DRUID,Wrath,274708
+DRUID,Swipe,257976
+SHAMAN,Totemic Call,245411
+DRUID,Wild Growth,245309
+SHAMAN,Jade Claws,243386
+DRUID,Jade Blossom,230562
+DRUID,Living Roots,220180
+WARRIOR,Fiery War Axe,215034
+SHAMAN,Jade Lightning,207460
+DRUID,Nourish,206792
+SHAMAN,Maelstrom Portal,206212
+DRUID,Jade Behemoth,199033
+DRUID,Azure Drake,195367
+SHAMAN,Tunnel Trogg,193752
+DRUID,Jade Spirit,192673
+SHAMAN,Totem Golem,192664
+DRUID,Feral Rage,188811
+WARRIOR,N'Zoth's First Mate,186609
+ROGUE,Backstab,180126
+ROGUE,The Coin,162072
+WARRIOR,Frothing Berserker,160403
+ROGUE,Eviscerate,158332
+SHAMAN,Hex,153455
+ROGUE,Swashburglar,152734
+WARRIOR,Kor'kron Elite,151447
+SHAMAN,Azure Drake,151327
+WARRIOR,Southsea Deckhand,147566
+SHAMAN,Flametongue Totem,145300
+PRIEST,Drakonid Operative,142579
+WARRIOR,Bloodsail Raider,140576
+SHAMAN,Jade Spirit,138028
+WARRIOR,Upgrade!,137701
+SHAMAN,Lightning Storm,135610
+DRUID,The Coin,135089
+SHAMAN,Mana Tide Totem,131973
+SHAMAN,Thing from Below,131663
+WARRIOR,The Coin,131565
+DRUID,Raven Idol,131086
+ROGUE,Azure Drake,129095
+SHAMAN,The Coin,124444
+WARRIOR,Dread Corsair,123697
+WARRIOR,Bloodsail Cultist,122477
+PRIEST,Lesser Heal,121975
+PRIEST,Wyrmrest Agent,121149
+PRIEST,Netherspite Historian,120822
+PRIEST,Power Word: Shield,120111
+PRIEST,Northshire Cleric,118228
+PRIEST,Twilight Whelp,114622
+PRIEST,Kabal Talonpriest,111935
+PRIEST,Twilight Guardian,111196
+SHAMAN,Lightning Bolt,111103
+ROGUE,Tomb Pillager,110762
+WARLOCK,Dark Peddler,106723
+WARRIOR,Arcanite Reaper,106308
+DRUID,Fandral Staghelm,105410
+MAGE,Fireball,105187
+WARRIOR,Heroic Strike,104517
+ROGUE,Fan of Knives,104196
+MAGE,Frostbolt,103497
+SHAMAN,Feral Spirit,103280
+ROGUE,Preparation,103140
+SHAMAN,Jinyu Waterspeaker,102996
+PALADIN,Reinforce,102868
+PRIEST,Blackwing Corruptor,98102
+WARLOCK,Imp Gang Boss,93989
+PRIEST,Shadow Word: Pain,93219
+SHAMAN,Jade Chieftain,93196
+ROGUE,Cold Blood,92734
+MAGE,Arcane Intellect,92331
+DRUID,Aya Blackpaw,91437
+WARRIOR,Sir Finley Mrrgglton,91048
+DRUID,Gadgetzan Auctioneer,88471
+DRUID,Ancient of War,87516
+PRIEST,Shadow Word: Death,85603
+DRUID,Excess Mana,80321
+ROGUE,SI:7 Agent,80237
+WARLOCK,The Coin,79472
+WARLOCK,Voidwalker,77623
+SHAMAN,Aya Blackpaw,75699
+PRIEST,Azure Drake,75504
+ROGUE,Edwin VanCleef,75161
+WARLOCK,Mortal Coil,73429
+WARRIOR,Southsea Captain,73167
+ROGUE,Sap,72466
+PRIEST,The Coin,71599
+MAGE,Forgotten Torch,68776
+ROGUE,Gadgetzan Auctioneer,68571
+MAGE,The Coin,68123
+HUNTER,Steady Shot,67519
+WARRIOR,Small-Time Buccaneer,67002
+SHAMAN,Bloodmage Thalnos,66937
+MAGE,Arcane Blast,65863
+ROGUE,Counterfeit Coin,65774
+DRUID,Druid of the Claw,64926
+DRUID,Mulch,64683
+ROGUE,Southsea Deckhand,61015
+MAGE,Mana Wyrm,60145
+WARLOCK,Soulfire,59738
+MAGE,Babbling Book,59368
+WARLOCK,Defender of Argus,59318
+MAGE,Azure Drake,58600
+WARLOCK,Kazakus,57856
+SHAMAN,Brann Bronzebeard,57837
+WARLOCK,Flame Imp,57749
+SHAMAN,Devolve,57437
+WARLOCK,Twilight Drake,55850
+WARLOCK,Malchezaar's Imp,55704
+PRIEST,Brann Bronzebeard,55615
+WARRIOR,Mortal Strike,54206
+PRIEST,Holy Nova,53873
+WARLOCK,Shadow Bolt,53767
+WARLOCK,Possessed Villager,53280
+MAGE,Firelands Portal,53173
+ROGUE,Conceal,51749
+WARRIOR,Steady Shot,50672
+DRUID,Brann Bronzebeard,50181
+WARLOCK,Acidic Swamp Ooze,50168
+MAGE,Arcane Missiles,49949
+WARLOCK,Mistress of Mixtures,48728
+MAGE,Fireblast,48201
+MAGE,Sorcerer's Apprentice,47414
+MAGE,Bloodmage Thalnos,46978
+WARLOCK,Power Overwhelming,46771
+WARLOCK,Doomsayer,46698
+WARRIOR,Tank Up!,46505
+MAGE,Flamewaker,45819
+WARLOCK,Darkshire Councilman,45770
+ROGUE,Questing Adventurer,45397
+WARLOCK,Brann Bronzebeard,44612
+MAGE,Doomsayer,44232
+MAGE,Water Elemental,43880
+WARLOCK,Dirty Rat,43733
+WARRIOR,Alexstrasza's Champion,43623
+WARLOCK,Earthen Ring Farseer,42846
+WARLOCK,Mountain Giant,42763
+WARLOCK,Second-Rate Bruiser,42612
+WARLOCK,Refreshment Vendor,42286
+ROGUE,Jade Shuriken,42269
+MAGE,Ice Block,42182
+WARLOCK,Reno Jackson,41894
+WARLOCK,Hellfire,41139
+SHAMAN,Flamewreathed Faceless,40709
+WARLOCK,Emperor Thaurissan,40191
+MAGE,Blizzard,40024
+WARRIOR,Naga Corsair,39660
+WARLOCK,Dire Wolf Alpha,39182
+WARRIOR,Life Tap,38634
+WARLOCK,Doomguard,38633
+WARRIOR,Fierce Monkey,38315
+MAGE,Flamestrike,38203
+PRIEST,Dragonfire Potion,37851
+WARLOCK,Siphon Soul,37792
+ROGUE,Bluegill Warrior,37619
+PALADIN,Truesilver Champion,37412
+PRIEST,Book Wyrm,37204
+WARLOCK,INFERNO!,36773
+WARRIOR,Fireblast,36658
+WARLOCK,Abyssal Enforcer,36541
+ROGUE,Bloodmage Thalnos,36259
+WARRIOR,Twilight Guardian,35959
+WARLOCK,Demonwrath,35460
+MAGE,Acolyte of Pain,34855
+WARLOCK,Knife Juggler,34783
+SHAMAN,Spirit Claws,34219
+PRIEST,Potion of Madness,34215
+MAGE,Mirror Image,34081
+ROGUE,"Shaku, the Collector",33907
+WARRIOR,Ravaging Ghoul,33449
+WARRIOR,Patches the Pirate,32492
+MAGE,Frost Nova,32098
+WARRIOR,Leeroy Jenkins,32072
+WARRIOR,Blackwing Corruptor,31956
+MAGE,Kazakus,31881
+ROGUE,Shadow Strike,31671
+PALADIN,Reinforce,30480
+ROGUE,Murloc Warleader,30265
+ROGUE,Small-Time Buccaneer,30226
+WARLOCK,Blastcrystal Potion,30070
+ROGUE,Argent Horserider,29852
+MAGE,Emperor Thaurissan,29741
+MAGE,Volcanic Potion,29493
+ROGUE,Leeroy Jenkins,29321
+ROGUE,Shiv,29145
+SHAMAN,Lava Burst,28728
+WARRIOR,Slam,28648
+DRUID,Bloodmage Thalnos,28567
+WARRIOR,Armor Up!,28322
+PALADIN,Aldor Peacekeeper,28294
+ROGUE,Jade Swarmer,28114
+DRUID,Moonfire,27659
+WARRIOR,Bash,27570
