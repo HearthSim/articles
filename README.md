@@ -5,8 +5,7 @@ Tools for doing large scale analysis on hsreplay.net data.
 
 ## Technology overview
 
-Replay analysis jobs are written using Yelp's [MRJob](https://pythonhosted
-.org/mrjob/index.html) library to process replays at scale via Map Reduce on EMR. Data
+Replay analysis jobs are written using Yelp's [MRJob](https://pythonhosted.org/mrjob/index.html) library to process replays at scale via Map Reduce on EMR. Data
 scientists can easily develop jobs locally and then submit a request to a member of the
 HearthSim team to have them run the job at scale on a production map reduce cluster.
 
